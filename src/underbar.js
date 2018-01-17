@@ -171,20 +171,27 @@
   //   }); // should be 5, regardless of the iterator function passed in
   //          No accumulator is given so the first element is used.
   _.reduce = function(collection, iterator, accumulator) {
-    // check for accumulator
-    // make a copy for collection, slice(1)
-
-    if(!accumulator){
-      var copy = collection.slice(1);
-      accumulator = collection[0];
-    } else {
+     if(Array.isArray(collection)){
       var copy = collection.slice(0);
-    }
+       if(accumulator === undefined){
+         copy = collection.slice(1);
+         accumulator = collection[0];
+       }
+       _.each(copy, function(item) {
+         accumulator = iterator(accumulator, item);
+       });
+     } else {
+       var keys = Object.keys(collection);
+       if (accumulator === undefined) {// check to see if accumulator is defined
+         keys = keys.slice(1);
+         accumulator = collection[keys[0]];
+       }
+     }
+     _.each(keys, function(item, index){
+       accumulator = iterator(accumulator, index);
+     });
 
-    _.each(copy, function(item){
-      accumulator = iterator(accumulator, item);
-    });
-    return accumulator;
+     return accumulator;
 
   };
 
@@ -203,13 +210,29 @@
 
   // Determine whether all of the elements match a truth test.
   _.every = function(collection, iterator) {
-    // TIP: Try re-using reduce() here.
+      return _.reduce(collection, function(acc, item){
+        if (iterator) {
+          return !!iterator(item) && acc === true;
+        } else {
+          return !!item && acc === true;
+        }
+      }, true);
+
   };
 
   // Determine whether any of the elements pass a truth test. If no iterator is
   // provided, provide a default one
   _.some = function(collection, iterator) {
     // TIP: There's a very clever way to re-use every() here.
+    if(iterator === undefined){
+      iterator = _.identity;
+    }
+
+    var result = _.every(collection, function(item){
+      return !!iterator(item) === false;
+    });
+
+  return !result;
   };
 
 
@@ -249,6 +272,16 @@
   // Like extend, but doesn't ever overwrite a key that already
   // exists in obj
   _.defaults = function(obj) {
+    var args = [...arguments];
+    _.each(args, function(item){
+      var keyArr = Object.keys(item);
+      for(var i = 0; i < keyArr.length; i++){
+        if(!obj.hasOwnProperty(keyArr[i])){
+          obj[keyArr[i]] = item[keyArr[i]];
+        }
+      };
+    });
+    return obj;
   };
 
 
@@ -292,6 +325,20 @@
   // already computed the result for the given argument and return that value
   // instead if possible.
   _.memoize = function(func) {
+    // create an array to store outputs
+    var results = {}; // {'1,2,3': func(arguments), 'arguments': func}
+    // return function
+    return function(){
+      var key = [].slice.call(arguments);// convert arguments to an array ...arguments = [].slice.call(arguments)
+      key = key.join('');// join the array into a string
+      if(results[key] === undefined){ // if results[key] === undefined
+        // add it to the results obj (key+value)
+        results[key] = func.apply(this, arguments);
+
+      }
+      return results[key];
+
+    };
   };
 
   // Delays a function for the given number of milliseconds, and then calls
@@ -301,6 +348,14 @@
   // parameter. For example _.delay(someFunction, 500, 'a', 'b') will
   // call someFunction('a', 'b') after 500ms
   _.delay = function(func, wait) {
+    // get arguments, but we dont want the first two
+    // slice it or shift() to remove items at the front
+    // return setTimeout with func, wait as arguments
+    var copy = [...arguments];
+    copy = copy.slice(2);
+    return setTimeout(function(){
+      func.apply(this, copy);
+    }, wait);
   };
 
 
@@ -315,6 +370,18 @@
   // input array. For a tip on how to make a copy of an array, see:
   // http://mdn.io/Array.prototype.slice
   _.shuffle = function(array) {
+    var copy = [];
+
+    for(var i = 0; i < array.length; i++){
+      var random = Math.random();
+      if(random < 0.5){
+        copy.unshift(array[i]);
+      } else {
+        copy.push(array[i]);
+      }
+    }
+    return copy;
+
   };
 
 
